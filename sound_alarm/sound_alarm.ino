@@ -95,6 +95,20 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Sound Sensor Ready...");
   connectWiFi();
+
+  //---------------------------- LCD setup ---------------------------
+  lcd.begin(16, 2); // 16 characters and 2 rows
+  lcd.setRGB(0,255,0); //Green backlight on startup
+
+  //Startup message
+  lcd.print("Smart Sound");
+  lcd.setCursor(0, 1);
+  lcd.print("Starting.......");
+  delay(2000);
+
+
+  //clear dispaly before the main loop
+  lcd.clear();
 }
 
 // ── Loop ──────────────────────────────────────
