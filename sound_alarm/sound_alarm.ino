@@ -2,6 +2,9 @@
 // Arduino UNO R4 WiFi + Firestore Logging
 #include <WiFiS3.h>
 #include <ArduinoJson.h>
+#include "rgb_lcd.h" //Grove LCD library
+
+rgb_lcd lcd; //Create LCD object
 
 // ── Config ────────────────────────────────────
 const char* WIFI_SSID            = "YOUR_WIFI_SSID";
