@@ -1,0 +1,5 @@
+Things to add to the arduino:
+-LCD screen
+-Feedback loop barrier
+
+Make the website read data from an excel sheet that the arduino puts data into
