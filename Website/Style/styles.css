@@ -1,0 +1,14 @@
+header{
+    height: 200px;
+    color: navajowhite;
+    border: 1px solid teal;
+    border-radius: 10px;
+}
+
+html {
+    background-color: teal;
+}
+
+#center{
+    text-align: center;
+}
