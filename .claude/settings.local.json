@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash \"C:/Users/win10 hp/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh\" --project-dir \"c:/Balint dolgai/Programming/IOTDashboard\")",
+      "Bash(npm create *)",
+      "Bash(npx create-vite@9.0.4 . --template react --force)"
+    ]
+  }
+}
