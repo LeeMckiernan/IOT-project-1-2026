@@ -5,7 +5,7 @@ const int soundPin = A0;     // Sound sensor
 const int buzzerPin = 4;     // Buzzer on D4
 
 int soundValue = 0;
-int threshold = 100;   // Adjust after testing
+int threshold = 250;   // Adjust after testing
 
 void setup() {
   pinMode(buzzerPin, OUTPUT);
