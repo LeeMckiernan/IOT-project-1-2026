@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Claude Code / Superpowers
+.claude/
+.superpowers/
+
+# Sensitive / environment
+.env
+.env.*
+!.env.example
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
