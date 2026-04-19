@@ -15,7 +15,7 @@ function GoogleIcon() {
 export default function Login() {
   function handleSignIn() {
     const provider = new GoogleAuthProvider()
-    signInWithPopup(auth, provider)
+    signInWithPopup(auth, provider).catch(err => console.error('Sign-in failed:', err))
   }
 
   return (

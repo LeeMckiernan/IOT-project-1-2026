@@ -15,7 +15,7 @@ export default function Dashboard({ user }) {
     )
     return onSnapshot(q, snap => {
       setEvents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-    })
+    }, err => console.error('Firestore error:', err))
   }, [])
 
   return (
@@ -24,7 +24,7 @@ export default function Dashboard({ user }) {
         <span className="app-title">Sound Events</span>
         <div className="header-right">
           <span className="user-email">{user.email}</span>
-          <button className="signout-btn" onClick={() => signOut(auth)}>
+          <button className="signout-btn" onClick={() => signOut(auth).catch(err => console.error('Sign-out failed:', err))}>
             Sign out
           </button>
         </div>
