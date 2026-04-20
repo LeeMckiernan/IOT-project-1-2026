@@ -1,3 +1,4 @@
+// Main dashboard view — streams the latest 100 sound events from Firestore in real time
 import { signOut } from 'firebase/auth'
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
@@ -8,11 +9,13 @@ export default function Dashboard({ user }) {
   const [events, setEvents] = useState([])
 
   useEffect(() => {
+    // Query the 'events' collection, newest first, capped at 100 rows
     const q = query(
       collection(db, 'events'),
       orderBy('time', 'desc'),
       limit(100)
     )
+    // onSnapshot keeps the list live; returns unsubscribe for cleanup
     return onSnapshot(q, snap => {
       setEvents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
     }, err => console.error('Firestore error:', err))

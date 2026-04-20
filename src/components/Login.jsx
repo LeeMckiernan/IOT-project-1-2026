@@ -1,6 +1,8 @@
+// Login page — only entry point into the app, requires Google sign-in via Firebase
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { auth } from '../firebase'
 
+// Inline Google logo SVG so there's no external icon dependency
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -15,6 +17,7 @@ function GoogleIcon() {
 export default function Login() {
   function handleSignIn() {
     const provider = new GoogleAuthProvider()
+    // Popup flow — on success Firebase triggers onAuthStateChanged in App.jsx
     signInWithPopup(auth, provider).catch(err => console.error('Sign-in failed:', err))
   }
 

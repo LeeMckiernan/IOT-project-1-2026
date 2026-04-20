@@ -12,10 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Claude Code / Superpowers
-.claude/
-.superpowers/
-
 # Sensitive / environment
 .env
 .env.*
