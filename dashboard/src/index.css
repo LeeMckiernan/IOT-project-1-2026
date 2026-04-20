@@ -1,0 +1,120 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+/* ── Login ────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  background: #1a1d27;
+  border: 1px solid #2a2d3a;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  width: 320px;
+}
+
+.login-card h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.login-card .subtitle {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 32px;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: #4285F4;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.google-btn:hover { background: #3574e3; }
+
+/* ── Dashboard ────────────────────────────── */
+.dashboard { display: flex; flex-direction: column; min-height: 100vh; }
+
+.dashboard-header {
+  background: #1a1d27;
+  border-bottom: 1px solid #2a2d3a;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-title { font-size: 15px; font-weight: 500; }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+.user-email { color: #64748b; font-size: 13px; }
+
+.signout-btn {
+  background: #2a2d3a;
+  color: #94a3b8;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.signout-btn:hover { background: #363a4e; }
+
+.dashboard-main { padding: 24px; }
+
+/* ── Event Table ──────────────────────────── */
+.event-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.event-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  border-bottom: 1px solid #2a2d3a;
+}
+
+.event-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #1e2130;
+  color: #94a3b8;
+}
+
+.event-table td:last-child { color: #e2e8f0; }
+
+.event-table tr:last-child td { border-bottom: none; }
+
+.db-green { color: #10b981; font-weight: 500; }
+.db-amber { color: #f59e0b; font-weight: 500; }
+.db-red   { color: #ef4444; font-weight: 500; }
