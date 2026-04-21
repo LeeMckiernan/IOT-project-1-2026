@@ -133,6 +133,9 @@ void loop() {
   else if (soundValue < loudLevel) {
     lcd.print("Status: Loud    ");
   }
+  else {
+    lcd.print("Status: TOO LOUD");
+  }
 
   delay(80);
 }
