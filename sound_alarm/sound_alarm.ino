@@ -132,6 +132,8 @@ void loop() {
   else if (soundValue < mediumLevel) {
     lcd.print("Status: Medium  ");
 
+    setColor(255, 80, 0);
+
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
   }
