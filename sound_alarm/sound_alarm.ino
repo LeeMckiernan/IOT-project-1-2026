@@ -135,9 +135,15 @@ void loop() {
   }
   else if (soundValue < loudLevel) {
     lcd.print("Status: Loud    ");
+
+    float peakDb = adcToDb(soundValue);
+    logToFirestore(peakDb);
   }
   else {
     lcd.print("Status: TOO LOUD");
+
+    float peakDb = adcToDb(soundValue);
+    logToFirestore(peakDb);
   }
 
   delay(80);
