@@ -148,6 +148,8 @@ void loop() {
   else {
     lcd.print("Status: TOO LOUD");
 
+    setColor(128, 0, 128);
+
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
   }
