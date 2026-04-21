@@ -130,6 +130,9 @@ void loop() {
   else if (soundValue < mediumLevel) {
     lcd.print("Status: Medium  ");
   }
+  else if (soundValue < loudLevel) {
+    lcd.print("Status: Loud    ");
+  }
 
   delay(80);
 }
