@@ -127,7 +127,9 @@ void loop() {
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
   }
-  
+  else if (soundValue < mediumLevel) {
+    lcd.print("Status: Medium  ");
+  }
 
   delay(80);
 }
