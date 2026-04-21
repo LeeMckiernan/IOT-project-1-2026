@@ -121,25 +121,13 @@ void loop() {
   Serial.print("Sound Level: ");
   Serial.println(soundValue);
 
-  if (soundValue > threshold) {   // Too loud
-    digitalWrite(buzzerPin, HIGH);
-    Serial.println("Too Loud!");
-
+  if (soundValue < quietLevel) {
+    lcd.print("Status: Quiet   ");
+  
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
-
-    delay(1500);
-
-    //Write to line 2 of the LCD screen
-    lcd.setCursor(0, 1);
-    lcd.print(".                "); // 16 spaces clears the row
-    lcd.setCursor(0, 1);
-    lcd.print("Status: Too Loud");
-
-    lcd.setRGB(0, 0, 255);
-  } else {
-    digitalWrite(buzzerPin, LOW);
   }
+  
 
   delay(80);
 }
