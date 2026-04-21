@@ -123,7 +123,9 @@ void loop() {
 
   if (soundValue < quietLevel) {
     lcd.print("Status: Quiet   ");
-  
+
+    setColor(0, 255, 0);
+    
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
   }
