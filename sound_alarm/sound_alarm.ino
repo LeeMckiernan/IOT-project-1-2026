@@ -16,7 +16,10 @@ const char* FIRESTORE_COLLECTION = "alarm_events";
 // ── Pins & Threshold ──────────────────────────
 const int soundPin   = A0;   // Sound sensor
 const int buzzerPin  = 4;    // Buzzer on D4
-int threshold        = 100;  // Adjust after testing
+// Thresholds (adjust after testing)
+int quietLevel = 200;
+int mediumLevel = 400;
+int loudLevel = 600;
 
 // ── Globals ───────────────────────────────────
 int soundValue   = 0;
