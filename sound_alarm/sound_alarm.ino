@@ -129,6 +129,9 @@ void loop() {
   }
   else if (soundValue < mediumLevel) {
     lcd.print("Status: Medium  ");
+
+    float peakDb = adcToDb(soundValue);
+    logToFirestore(peakDb);
   }
   else if (soundValue < loudLevel) {
     lcd.print("Status: Loud    ");
