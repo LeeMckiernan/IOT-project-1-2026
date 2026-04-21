@@ -140,6 +140,8 @@ void loop() {
   else if (soundValue < loudLevel) {
     lcd.print("Status: Loud    ");
 
+    setColor(255, 0, 0);
+
     float peakDb = adcToDb(soundValue);
     logToFirestore(peakDb);
   }
