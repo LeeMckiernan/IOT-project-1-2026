@@ -1,77 +1,153 @@
-// Sound Sensor + Buzzer Alarm
-// Arduino UNO R4 WiFi + Firestore Logging
+// Sound Alarm — Arduino UNO R4 WiFi
+// State machine: IDLE → ALARM → log to Firestore → IDLE
+//
+// Libraries needed (install via Library Manager):
+//   ArduinoJson, Grove LCD RGB Backlight (search "rgb_lcd")
+//
+// Firestore rules must allow unauthenticated writes to the "events" collection,
+// or update the rules to: allow write: if true;  (for the events path)
 #include <WiFiS3.h>
+#include <WiFiUdp.h>
 #include <ArduinoJson.h>
-#include "rgb_lcd.h" //Grove LCD library
+#include "rgb_lcd.h"
+#include <time.h>
 
-rgb_lcd lcd; //Create LCD object
-
-// ── Config ────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 const char* WIFI_SSID            = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD        = "YOUR_WIFI_PASSWORD";
 const char* FIRESTORE_HOST       = "firestore.googleapis.com";
-const char* FIRESTORE_PROJECT_ID = "YOUR_FIREBASE_PROJECT_ID";
-const char* FIRESTORE_COLLECTION = "alarm_events";
+const char* FIRESTORE_PROJECT_ID = "YOUR_PROJECT_ID";
+const char* FIRESTORE_API_KEY    = "YOUR_WEB_API_KEY";  // Firebase project web API key
+const char* DEVICE_NAME          = "Arduino-UNO-R4";
 
-// ── Pins & Threshold ──────────────────────────
-const int soundPin   = A0;   // Sound sensor
-const int buzzerPin  = 4;    // Buzzer on D4
-// Thresholds (adjust after testing)
-int quietLevel = 200;
-int mediumLevel = 400;
-int loudLevel = 600;
+// ── Pins ──────────────────────────────────────────────────────────────────────
+const int SOUND_PIN  = A0;
+const int BUZZER_PIN = 4;
 
-// ── Globals ───────────────────────────────────
-int soundValue   = 0;
-int eventCounter = 0;
+// ── Thresholds ────────────────────────────────────────────────────────────────
+const int  ALARM_THRESHOLD   = 600;   // ADC value that triggers alarm
+const int  SILENCE_THRESHOLD = 300;   // ADC value considered quiet (hysteresis)
+const long ALARM_HOLD_MS     = 2000;  // Stay in alarm at least this long after sound drops
+
+// ── Grove LCD RGB Backlight V5.0 (16×2) ──────────────────────────────────────
+rgb_lcd lcd;
+
+// ── State machine ─────────────────────────────────────────────────────────────
+enum State { IDLE, ALARM };
+State state = IDLE;
+
+// ── Alarm tracking ────────────────────────────────────────────────────────────
+unsigned long alarmStartMs = 0;
+unsigned long lastLoudMs   = 0;
+int           peakAdc      = 0;
+
+// ── NTP time tracking ─────────────────────────────────────────────────────────
+unsigned long ntpEpoch  = 0;
+unsigned long ntpMillis = 0;
+bool          timeSynced = false;
 
 WiFiSSLClient wifiClient;
+WiFiUDP       udp;
 
-// ── Helpers ───────────────────────────────────
-float adcToDb(int adcValue) {
-  if (adcValue <= 0) return 30.0;
-  float ratio = (float)adcValue / 1023.0;
-  return 30.0 + (60.0 * log10(1.0 + ratio * 9.0) / log10(10.0));
+// ── ADC → dB ─────────────────────────────────────────────────────────────────
+float adcToDb(int adc) {
+  if (adc <= 0) return 30.0f;
+  return 30.0f + 60.0f * log10f(1.0f + (adc / 1023.0f) * 9.0f);
 }
 
-void connectWiFi() {
-  Serial.print("Connecting to WiFi");
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println(" Connected!");
+// ── LCD draw ──────────────────────────────────────────────────────────────────
+// Normal: green backlight. Alarm: red backlight.
+void drawLcd(float db, bool alarm) {
+  lcd.clear();
+  if (alarm) {
+    lcd.setRGB(255, 0, 0);
+    lcd.setCursor(0, 0);
+    lcd.print("!! ALARM !!     ");
+    lcd.setCursor(0, 1);
+    lcd.print(db, 1);
+    lcd.print(" dB         ");
   } else {
-    Serial.println(" Failed. Running in offline mode.");
+    lcd.setRGB(0, 255, 0);
+    lcd.setCursor(0, 0);
+    lcd.print("Sound Level     ");
+    lcd.setCursor(0, 1);
+    lcd.print(db, 1);
+    lcd.print(" dB         ");
   }
 }
 
-void logToFirestore(float peakDb) {
-  if (WiFi.status() != WL_CONNECTED) return;
+// ── NTP sync ─────────────────────────────────────────────────────────────────
+void syncNTP() {
+  byte packet[48] = {};
+  packet[0] = 0b11100011; // LI=0, Version=4, Mode=3 (client)
+  packet[2] = 6;
+  packet[3] = 0xEC;
+  packet[12] = 49; packet[13] = 0x4E; packet[14] = 49; packet[15] = 52;
 
-  eventCounter++;
+  IPAddress ntpIP;
+  WiFi.hostByName("pool.ntp.org", ntpIP);
+  udp.begin(2390);
+  udp.beginPacket(ntpIP, 123);
+  udp.write(packet, 48);
+  udp.endPacket();
 
-  StaticJsonDocument<256> doc;
+  delay(1000);
+  if (udp.parsePacket() >= 48) {
+    udp.read(packet, 48);
+    unsigned long secs = (unsigned long)packet[40] << 24 |
+                         (unsigned long)packet[41] << 16 |
+                         (unsigned long)packet[42] <<  8 |
+                         (unsigned long)packet[43];
+    ntpEpoch  = secs - 2208988800UL; // NTP epoch → Unix epoch
+    ntpMillis = millis();
+    timeSynced = true;
+    Serial.println("NTP sync OK");
+  } else {
+    Serial.println("NTP sync failed — timestamps will be invalid");
+  }
+  udp.stop();
+}
+
+unsigned long nowEpoch() {
+  return ntpEpoch + (millis() - ntpMillis) / 1000UL;
+}
+
+String epochToRFC3339(unsigned long epoch) {
+  time_t t = (time_t)epoch;
+  struct tm* gmt = gmtime(&t);
+  char buf[25];
+  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+    gmt->tm_year + 1900, gmt->tm_mon + 1, gmt->tm_mday,
+    gmt->tm_hour, gmt->tm_min, gmt->tm_sec);
+  return String(buf);
+}
+
+// ── Firestore log ─────────────────────────────────────────────────────────────
+// Writes one document to the "events" collection matching the dashboard schema:
+//   time (timestampValue), db (doubleValue), duration (doubleValue), deviceName (stringValue)
+void logToFirestore(float peakDb, float durationSec, const String& timestamp) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected — skipping log");
+    return;
+  }
+
+  StaticJsonDocument<512> doc;
   JsonObject fields = doc.createNestedObject("fields");
+  fields["time"]["timestampValue"]    = timestamp;
+  fields["db"]["doubleValue"]         = peakDb;
+  fields["duration"]["doubleValue"]   = durationSec;
+  fields["deviceName"]["stringValue"] = DEVICE_NAME;
 
-  fields["event_id"]["integerValue"] = String(eventCounter);
-  fields["timestamp"]["stringValue"] = "uptime+" + String(millis() / 1000) + "s";
-  fields["peak_db"]["doubleValue"]   = peakDb;
-
-  char body[256];
-  serializeJson(doc, body);
+  char body[512];
+  int bodyLen = serializeJson(doc, body, sizeof(body));
 
   String path = "/v1/projects/";
   path += FIRESTORE_PROJECT_ID;
-  path += "/databases/(default)/documents/";
-  path += FIRESTORE_COLLECTION;
+  path += "/databases/(default)/documents/events?key=";
+  path += FIRESTORE_API_KEY;
 
   if (!wifiClient.connect(FIRESTORE_HOST, 443)) {
-    Serial.println("Firestore connection failed.");
+    Serial.println("Firestore connect failed");
     return;
   }
 
@@ -79,80 +155,85 @@ void logToFirestore(float peakDb) {
   wifiClient.print("Host: "); wifiClient.println(FIRESTORE_HOST);
   wifiClient.println("Content-Type: application/json");
   wifiClient.println("Connection: close");
-  wifiClient.print("Content-Length: "); wifiClient.println(strlen(body));
+  wifiClient.print("Content-Length: "); wifiClient.println(bodyLen);
   wifiClient.println();
   wifiClient.print(body);
 
-  unsigned long timeout = millis();
-  while (wifiClient.available() == 0 && millis() - timeout < 5000);
+  unsigned long t = millis();
+  while (!wifiClient.available() && millis() - t < 8000);
   if (wifiClient.available()) {
-    String status = wifiClient.readStringUntil('\n');
-    Serial.println("Firestore: " + status);
+    Serial.println("Firestore: " + wifiClient.readStringUntil('\n'));
   }
   wifiClient.stop();
 }
 
-// ── Setup ─────────────────────────────────────
+// ── Setup ─────────────────────────────────────────────────────────────────────
 void setup() {
-  pinMode(buzzerPin, OUTPUT);
   Serial.begin(9600);
-  Serial.println("Sound Sensor Ready...");
-  connectWiFi();
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
 
-  //---------------------------- LCD setup ---------------------------
-  lcd.begin(16, 2); // 16 characters and 2 rows
-  lcd.setRGB(0,255,0); //Green backlight on startup
-
-  //Startup message
+  lcd.begin(16, 2);
+  lcd.setRGB(0, 255, 0);
+  lcd.setCursor(0, 0);
   lcd.print("Smart Sound");
   lcd.setCursor(0, 1);
-  lcd.print("Starting.......");
-  delay(2000);
+  lcd.print("Connecting...");
 
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("WiFi");
+  for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(WiFi.status() == WL_CONNECTED ? " connected" : " failed");
 
-  //clear dispaly before the main loop
+  if (WiFi.status() == WL_CONNECTED) syncNTP();
+
   lcd.clear();
 }
 
-// ── Loop ──────────────────────────────────────
+// ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
-  soundValue = analogRead(soundPin);
+  int adc = analogRead(SOUND_PIN);
+  float db = adcToDb(adc);
 
-  Serial.print("Sound Level: ");
-  Serial.println(soundValue);
+  if (state == IDLE) {
+    drawLcd(db, false);
 
-  if (soundValue < quietLevel) {
-    lcd.print("Status: Quiet   ");
+    if (adc >= ALARM_THRESHOLD) {
+      state        = ALARM;
+      alarmStartMs = millis();
+      lastLoudMs   = millis();
+      peakAdc      = adc;
+      digitalWrite(BUZZER_PIN, HIGH);
+      Serial.println("ALARM triggered");
+    }
 
-    setColor(0, 255, 0);
-    
-    float peakDb = adcToDb(soundValue);
-    logToFirestore(peakDb);
+  } else { // ALARM
+    if (adc > peakAdc) peakAdc = adc;
+    if (adc >= SILENCE_THRESHOLD) lastLoudMs = millis();
+
+    drawLcd(db, true);
+
+    // Return to idle when quiet AND hold time has elapsed
+    if (adc < SILENCE_THRESHOLD && (millis() - lastLoudMs) >= (unsigned long)ALARM_HOLD_MS) {
+      digitalWrite(BUZZER_PIN, LOW);
+
+      float peakDb      = adcToDb(peakAdc);
+      float durationSec = (millis() - alarmStartMs) / 1000.0f;
+      String ts         = timeSynced ? epochToRFC3339(nowEpoch()) : "1970-01-01T00:00:00Z";
+
+      Serial.print("Logging — db="); Serial.print(peakDb);
+      Serial.print(" duration="); Serial.print(durationSec);
+      Serial.print("s time="); Serial.println(ts);
+
+      logToFirestore(peakDb, durationSec, ts);
+
+      state = IDLE;
+      Serial.println("IDLE");
+    }
   }
-  else if (soundValue < mediumLevel) {
-    lcd.print("Status: Medium  ");
 
-    setColor(255, 80, 0);
-
-    float peakDb = adcToDb(soundValue);
-    logToFirestore(peakDb);
-  }
-  else if (soundValue < loudLevel) {
-    lcd.print("Status: Loud    ");
-
-    setColor(255, 0, 0);
-
-    float peakDb = adcToDb(soundValue);
-    logToFirestore(peakDb);
-  }
-  else {
-    lcd.print("Status: TOO LOUD");
-
-    setColor(128, 0, 128);
-
-    float peakDb = adcToDb(soundValue);
-    logToFirestore(peakDb);
-  }
-
-  delay(80);
+  delay(100);
 }
