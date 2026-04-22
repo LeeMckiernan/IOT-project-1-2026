@@ -16,8 +16,8 @@
 const char* WIFI_SSID            = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD        = "YOUR_WIFI_PASSWORD";
 const char* FIRESTORE_HOST       = "firestore.googleapis.com";
-const char* FIRESTORE_PROJECT_ID = "YOUR_PROJECT_ID";
-const char* FIRESTORE_API_KEY    = "YOUR_WEB_API_KEY";  // Firebase project web API key
+const char* FIRESTORE_PROJECT_ID = "iot-dashboard-b0b46";
+const char* FIRESTORE_API_KEY    = "AIzaSyAIdrzuEPa4ELiRhP1meKWEZkjJKVwV1lg";
 const char* DEVICE_NAME          = "Arduino-UNO-R4";
 
 // ── Pins ──────────────────────────────────────────────────────────────────────

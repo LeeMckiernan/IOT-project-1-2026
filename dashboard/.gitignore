@@ -15,7 +15,7 @@ dist-ssr
 # Sensitive / environment
 .env
 .env.*
-!.env.example
+.env.example
 .firebase/
 firebase-debug.log
 firestore-debug.log
