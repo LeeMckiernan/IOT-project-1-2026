@@ -25,7 +25,7 @@ const int SOUND_PIN  = A0;
 const int BUZZER_PIN = 4;
 
 // ── Thresholds ────────────────────────────────────────────────────────────────
-const int  ALARM_THRESHOLD   = 500;   // ADC value that triggers alarm
+const int  ALARM_THRESHOLD   = 600;   // ADC value that triggers alarm
 const int  SILENCE_THRESHOLD = 300;   // ADC value considered quiet (hysteresis)
 const long ALARM_HOLD_MS     = 2000;  // Stay in alarm at least this long after sound drops
 const long MAX_ALARM_MS      = 15000; // Hard cap: alarm always exits after this many ms
