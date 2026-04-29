@@ -28,6 +28,11 @@ const int BUZZER_PIN = 4;
 const int  ALARM_THRESHOLD   = 500;   // ADC value that triggers alarm
 const int  SILENCE_THRESHOLD = 300;   // ADC value considered quiet (hysteresis)
 const long ALARM_HOLD_MS     = 2000;  // Stay in alarm at least this long after sound drops
+const long MAX_ALARM_MS      = 15000; // Hard cap: alarm always exits after this many ms
+
+// ── NTP retry ─────────────────────────────────────────────────────────────────
+const long NTP_RETRY_MS      = 15000;   // Retry every 30 s until first sync
+const long NTP_RESYNC_MS     = 3600000; // Re-sync every hour once synced
 
 // ── Grove LCD RGB Backlight V5.0 (16×2) ──────────────────────────────────────
 rgb_lcd lcd;
@@ -42,9 +47,10 @@ unsigned long lastLoudMs   = 0;
 int           peakAdc      = 0;
 
 // ── NTP time tracking ─────────────────────────────────────────────────────────
-unsigned long ntpEpoch  = 0;
-unsigned long ntpMillis = 0;
-bool          timeSynced = false;
+unsigned long ntpEpoch        = 0;
+unsigned long ntpMillis       = 0;
+bool          timeSynced      = false;
+unsigned long lastNtpAttemptMs = 0;
 
 WiFiSSLClient wifiClient;
 WiFiUDP       udp;
@@ -189,12 +195,21 @@ void setup() {
   Serial.println(WiFi.status() == WL_CONNECTED ? " connected" : " failed");
 
   if (WiFi.status() == WL_CONNECTED) syncNTP();
+  lastNtpAttemptMs = millis();
 
   lcd.clear();
 }
 
 // ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
+  // Retry NTP: every 30 s until first sync, then re-sync hourly
+  unsigned long nowMs = millis();
+  long ntpInterval = timeSynced ? NTP_RESYNC_MS : NTP_RETRY_MS;
+  if ((nowMs - lastNtpAttemptMs) >= (unsigned long)ntpInterval) {
+    lastNtpAttemptMs = nowMs;
+    if (WiFi.status() == WL_CONNECTED) syncNTP();
+  }
+
   int adc = analogRead(SOUND_PIN);
   float db = adcToDb(adc);
 
@@ -216,8 +231,10 @@ void loop() {
 
     drawLcd(db, true);
 
-    // Return to idle when quiet AND hold time has elapsed
-    if (adc < SILENCE_THRESHOLD && (millis() - lastLoudMs) >= (unsigned long)ALARM_HOLD_MS) {
+    // Return to idle when quiet + hold elapsed, OR hard cap reached
+    bool isQuiet  = adc < SILENCE_THRESHOLD && (millis() - lastLoudMs) >= (unsigned long)ALARM_HOLD_MS;
+    bool timedOut = (millis() - alarmStartMs) >= (unsigned long)MAX_ALARM_MS;
+    if (isQuiet || timedOut) {
       digitalWrite(BUZZER_PIN, LOW);
 
       float peakDb      = adcToDb(peakAdc);
