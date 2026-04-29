@@ -13,8 +13,8 @@
 #include <time.h>
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const char* WIFI_SSID            = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD        = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID            = "IOT-MPSK";
+const char* WIFI_PASSWORD        = "rhgbnvfv";
 const char* FIRESTORE_HOST       = "firestore.googleapis.com";
 const char* FIRESTORE_PROJECT_ID = "iot-dashboard-b0b46";
 const char* FIRESTORE_API_KEY    = "AIzaSyAIdrzuEPa4ELiRhP1meKWEZkjJKVwV1lg";
@@ -25,7 +25,7 @@ const int SOUND_PIN  = A0;
 const int BUZZER_PIN = 4;
 
 // ── Thresholds ────────────────────────────────────────────────────────────────
-const int  ALARM_THRESHOLD   = 600;   // ADC value that triggers alarm
+const int  ALARM_THRESHOLD   = 500;   // ADC value that triggers alarm
 const int  SILENCE_THRESHOLD = 300;   // ADC value considered quiet (hysteresis)
 const long ALARM_HOLD_MS     = 2000;  // Stay in alarm at least this long after sound drops
 
